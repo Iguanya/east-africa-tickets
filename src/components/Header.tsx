@@ -29,9 +29,11 @@ const Header = () => {
             <User className="h-4 w-4 mr-2" />
             Login
           </Button>
-          <Button variant="hero" size="sm">
-            <Calendar className="h-4 w-4 mr-2" />
-            Create Event
+          <Button variant="hero" size="sm" asChild>
+            <a href="/admin">
+              <Calendar className="h-4 w-4 mr-2" />
+              Admin Panel
+            </a>
           </Button>
         </div>
       </div>
