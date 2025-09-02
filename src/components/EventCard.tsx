@@ -2,6 +2,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Users, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface EventCardProps {
   id: string;
@@ -19,6 +20,7 @@ interface EventCardProps {
 }
 
 const EventCard = ({ 
+  id,
   title, 
   description, 
   image, 
@@ -31,6 +33,8 @@ const EventCard = ({
   ticketsLeft, 
   rating 
 }: EventCardProps) => {
+  const navigate = useNavigate();
+
   return (
     <Card className="overflow-hidden hover:shadow-strong transition-all duration-300 group">
       <div className="relative overflow-hidden">
@@ -84,7 +88,11 @@ const EventCard = ({
           </span>
         </div>
         
-        <Button variant="premium" size="sm">
+        <Button 
+          variant="premium" 
+          size="sm"
+          onClick={() => navigate(`/event/${id}`)}
+        >
           Book Now
         </Button>
       </CardFooter>

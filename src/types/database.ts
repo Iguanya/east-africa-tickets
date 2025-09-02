@@ -5,26 +5,25 @@ export interface Event {
   description: string | null;
   image_url: string | null;
   date: string;
-  time: string;
   location: string;
   category: string;
-  organizer_id: string;
   max_capacity: number;
   tickets_sold: number;
   status: string;
-  rating: number | null;
+  currency: 'KSH' | 'UGX' | 'TZS' | 'RWF' | 'ETB' | 'USD';
   created_at: string;
   updated_at: string;
+  created_by?: string;
   tickets?: Ticket[];
 }
 
 export interface Ticket {
   id: string;
   event_id: string;
+  type: 'regular' | 'vip' | 'early_bird' | 'student' | 'group';
   name: string;
   description: string | null;
   price: number;
-  currency: string;
   quantity_available: number;
   quantity_sold: number;
   created_at: string;
@@ -33,11 +32,11 @@ export interface Ticket {
 
 export interface UserProfile {
   id: string;
+  email: string;
   full_name: string | null;
   phone: string | null;
   points: number;
-  total_tickets_bought: number;
-  is_admin: boolean;
+  is_admin?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -49,12 +48,12 @@ export interface Booking {
   ticket_id: string;
   quantity: number;
   total_amount: number;
-  currency: string;
+  currency: 'KSH' | 'UGX' | 'TZS' | 'RWF' | 'ETB' | 'USD';
   status: 'pending' | 'confirmed' | 'cancelled' | 'expired';
-  hold_expires_at: string;
   guest_email: string | null;
   guest_name: string | null;
   guest_phone: string | null;
+  expires_at: string;
   created_at: string;
   updated_at: string;
 }
@@ -63,11 +62,11 @@ export interface Payment {
   id: string;
   booking_id: string;
   amount: number;
-  currency: string;
-  payment_method: 'card' | 'mpesa' | 'airtel_money';
+  currency: 'KSH' | 'UGX' | 'TZS' | 'RWF' | 'ETB' | 'USD';
+  payment_method: 'visa' | 'mastercard' | 'mpesa' | 'airtel_money';
   payment_reference: string | null;
+  transaction_id: string | null;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
-  processed_at: string | null;
   created_at: string;
   updated_at: string;
 }

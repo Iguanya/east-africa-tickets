@@ -31,7 +31,7 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
     description: event?.description || '',
     image_url: event?.image_url || '',
     date: event?.date ? new Date(event.date).toISOString().split('T')[0] : '',
-    time: event?.time || '',
+    time: event?.date ? new Date(event.date).toISOString().split('T')[1].slice(0, 5) : '',
     location: event?.location || '',
     category: event?.category || '',
     max_capacity: event?.max_capacity || 100,
