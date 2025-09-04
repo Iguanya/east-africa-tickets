@@ -17,12 +17,12 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 158 64% 13%;
 
-    --primary: 158 64% 25%;
+    --primary: 195 98% 21%;
     --primary-foreground: 0 0% 98%;
-    --primary-glow: 158 64% 40%;
+    --primary-glow: 195 98% 35%;
 
-    --secondary: 43 96% 56%;
-    --secondary-foreground: 158 64% 13%;
+    --secondary: 0 100% 99%;
+    --secondary-foreground: 195 98% 21%;
 
     --muted: 158 20% 94%;
     --muted-foreground: 158 15% 45%;
@@ -82,12 +82,12 @@ All colors MUST be HSL.
     --popover: 158 64% 8%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 158 64% 55%;
-    --primary-foreground: 158 64% 5%;
-    --primary-glow: 158 64% 70%;
+    --primary: 195 98% 35%;
+    --primary-foreground: 0 100% 99%;
+    --primary-glow: 195 98% 50%;
 
-    --secondary: 43 96% 56%;
-    --secondary-foreground: 158 64% 5%;
+    --secondary: 0 100% 99%;
+    --secondary-foreground: 195 98% 21%;
 
     --muted: 158 20% 15%;
     --muted-foreground: 158 15% 70%;
