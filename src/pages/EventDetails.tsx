@@ -79,32 +79,35 @@ const EventDetails = () => {
         event_id: event.id,
         ticket_id: selectedTicket.id,
         quantity,
-        total_amount: selectedTicket.price * quantity,
-        currency: event.currency || 'KSH',
-        ...(user ? { user_id: user.id } : {
-          guest_name: guestInfo.name,
-          guest_email: guestInfo.email,
-          guest_phone: guestInfo.phone
-        })
+        total_amount: Number(selectedTicket.price) * quantity,
+        currency: event.currency || "KSH",
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min hold
+        ...(user
+          ? { user_id: user.id }
+          : {
+              guest_name: guestInfo.name,
+              guest_email: guestInfo.email,
+              guest_phone: guestInfo.phone,
+            }),
       };
 
       const newBooking = await bookingService.createBooking(booking);
-      
+
       toast({
         title: "Booking Created",
-        description: `Your booking has been created! You have 15 minutes to complete payment.`,
+        description: "Your booking has been created! You have 15 minutes to complete payment.",
       });
 
-      // Navigate to payment page (to be implemented)
       navigate(`/payment/${newBooking.id}`);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to create booking",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
+
 
   const handleTicketSelect = (ticket: Ticket) => {
     setSelectedTicket(ticket);

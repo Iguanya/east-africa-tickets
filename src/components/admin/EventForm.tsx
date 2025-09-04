@@ -110,14 +110,15 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
       if (!event) {
         for (const ticket of tickets) {
           if (ticket.name && ticket.price > 0 && ticket.quantity_available > 0) {
-            await ticketService.createTicket({
-              event_id: savedEvent.id,
-              name: ticket.name,
-              description: ticket.description,
-              price: ticket.price,
-              currency: ticket.currency,
-              quantity_available: ticket.quantity_available,
-            });
+          await ticketService.createTicket({
+            event_id: savedEvent.id,
+            name: ticket.name,
+            type: ticket.name, // 👈 added
+            description: ticket.description,
+            price: ticket.price,
+            currency: ticket.currency,
+            quantity_available: ticket.quantity_available,
+          });
           }
         }
       }
@@ -136,7 +137,10 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form 
+      onSubmit={handleSubmit} 
+      className="space-y-6 max-h-[calc(100vh-4rem)] overflow-y-auto p-2"
+    >
       {/* Basic Event Information */}
       <Card>
         <CardHeader>

@@ -107,6 +107,7 @@ export const ticketService = {
   }
 };
 
+// bookingService.ts
 export const bookingService = {
   // Create booking with 15-minute hold
   async createBooking(booking: any) {
@@ -138,15 +139,28 @@ export const bookingService = {
 
   // Confirm booking (after payment)
   async confirmBooking(bookingId: string) {
+    // 1. Check if a successful payment exists
+    const { data: payments, error: payError } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('booking_id', bookingId)
+      .eq('status', 'success')
+
+    if (payError) throw payError
+    if (!payments || payments.length === 0) {
+      throw new Error("No successful payment found for this booking")
+    }
+
+    // 2. Update the booking
     const { data, error } = await supabase
       .from('bookings')
       .update({ status: 'confirmed' })
       .eq('id', bookingId)
       .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+      .single()
+
+    if (error) throw error
+    return data
   },
 
   // Cancel booking
@@ -200,3 +214,59 @@ export const userService = {
     return data;
   }
 };
+
+const METHOD_MAP: Record<string, string> = {
+  "M-Pesa": "mpesa",
+  "Stripe": "stripe",
+  "PayPal": "paypal",
+  "Card": "card",
+  "simulated": "simulated"
+}
+
+export const paymentService = {
+  async processPayment(
+    bookingId: string,
+    amount: number,
+    method: string,
+    currency: string
+  ) {
+    // ✅ Ensure method maps correctly to DB-accepted value
+    const mappedMethod = METHOD_MAP[method] || "simulated"
+
+    // 1️⃣ Record the payment
+    const { data: payment, error } = await supabase
+      .from("payments")
+      .insert([
+        {
+          booking_id: bookingId,
+          amount,
+          payment_method: mappedMethod,
+          currency,
+          status: "success",
+        },
+      ])
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // 2️⃣ Fetch booking details (to know which ticket & how many)
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select("ticket_id, quantity")
+      .eq("id", bookingId)
+      .single()
+
+    if (bookingError) throw bookingError
+
+    // 3️⃣ Update ticket quantities
+    const { error: ticketError } = await supabase.rpc("update_ticket_quantities", {
+      ticket_id: booking.ticket_id,
+      qty: booking.quantity,
+    })
+
+    if (ticketError) throw ticketError
+
+    return payment
+  }
+}

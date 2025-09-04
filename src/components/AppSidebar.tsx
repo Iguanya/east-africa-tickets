@@ -25,12 +25,17 @@ interface AppSidebarProps {
   onToggle?: () => void;
 }
 
-export function AppSidebar({ isAdmin = false, onSignOut, collapsed = false, onToggle }: AppSidebarProps) {
+export function AppSidebar({
+  isAdmin = false,
+  onSignOut,
+  collapsed = false,
+  onToggle,
+}: AppSidebarProps) {
   const location = useLocation();
   const currentPath = location.pathname;
-  
+
   const items = isAdmin ? adminItems : userItems;
-  
+
   const isActive = (path: string) => currentPath === path;
 
   return (
@@ -57,6 +62,23 @@ export function AppSidebar({ isAdmin = false, onSignOut, collapsed = false, onTo
             <Menu className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      {/* Home Link */}
+      <div className="p-4 border-b">
+        <NavLink
+          to="/"
+          end
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+            isActive("/")
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-muted text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Home className="h-4 w-4 flex-shrink-0" />
+          {!collapsed && <span>Home</span>}
+        </NavLink>
       </div>
 
       {/* Navigation */}
