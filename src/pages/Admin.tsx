@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase, userService } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+import { userService } from "@/lib/supabase";
 import { UserProfile } from "@/types/database";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
