@@ -89,8 +89,8 @@ const AdminDashboard = () => {
   const stats = {
     totalEvents: events.length,
     activeEvents: events.filter(e => e.status === 'active').length,
-    totalTicketsSold: events.reduce((sum, e) => sum + e.tickets_sold, 0),
-    totalRevenue: events.reduce((sum, e) => sum + (e.revenue || 0), 0)
+    totalTicketsSold: events.reduce((sum, e) => sum + (e.tickets_sold || 0), 0),
+    totalRevenue: 0 // Will calculate from bookings/payments in the future
   };
 
   if (loading) {
