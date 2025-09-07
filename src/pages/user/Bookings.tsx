@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, MapPin, Ticket, Download } from "lucide-react";
+import { Calendar, MapPin, Ticket, Download, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ interface Booking {
   total_amount: number;
   currency: string;
   status: string;
+  expires_at: string;
   created_at: string;
   events: {
     title: string;
@@ -32,6 +33,7 @@ export default function UserBookings() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,6 +67,32 @@ export default function UserBookings() {
     }
   };
 
+  const refreshBookings = async () => {
+    setRefreshing(true);
+    
+    try {
+      // First trigger expiration check
+      await supabase.functions.invoke('expire-bookings');
+      
+      // Then refresh the bookings
+      await fetchBookings();
+      
+      toast({
+        title: "Refreshed",
+        description: "Your bookings have been updated",
+      });
+    } catch (error) {
+      console.error('Error refreshing bookings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh bookings",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed': return 'default';
@@ -83,6 +111,26 @@ export default function UserBookings() {
       case 'cancelled': return 'Cancelled';
       default: return status;
     }
+  };
+
+  const isExpiringSoon = (expiresAt: string) => {
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const minutesLeft = (expiry.getTime() - now.getTime()) / (1000 * 60);
+    return minutesLeft > 0 && minutesLeft <= 5; // Expires in 5 minutes or less
+  };
+
+  const getTimeLeft = (expiresAt: string) => {
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const minutesLeft = Math.max(0, Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60)));
+    
+    if (minutesLeft === 0) return "Expired";
+    if (minutesLeft < 60) return `${minutesLeft}m left`;
+    
+    const hoursLeft = Math.floor(minutesLeft / 60);
+    const remainingMinutes = minutesLeft % 60;
+    return `${hoursLeft}h ${remainingMinutes}m left`;
   };
 
   const downloadTicket = (bookingId: string) => {
@@ -113,9 +161,19 @@ export default function UserBookings() {
       
       <main className="flex-1 p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold">My Bookings</h1>
-            <p className="text-muted-foreground">View and manage your event bookings</p>
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">My Bookings</h1>
+              <p className="text-muted-foreground">View and manage your event bookings</p>
+            </div>
+            <Button 
+              onClick={refreshBookings} 
+              disabled={refreshing}
+              variant="outline"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
 
           {bookings.length === 0 ? (
@@ -143,9 +201,19 @@ export default function UserBookings() {
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="text-xl mb-2">{booking.events.title}</CardTitle>
-                            <Badge variant={getStatusColor(booking.status)} className="mb-2">
-                              {getStatusText(booking.status)}
-                            </Badge>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              <Badge variant={getStatusColor(booking.status)}>
+                                {getStatusText(booking.status)}
+                              </Badge>
+                              {booking.status === 'pending' && (
+                                <Badge 
+                                  variant={isExpiringSoon(booking.expires_at) ? "destructive" : "outline"}
+                                  className="text-xs"
+                                >
+                                  {getTimeLeft(booking.expires_at)}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           {booking.status === 'confirmed' && (
                             <Button 
@@ -203,6 +271,11 @@ export default function UserBookings() {
 
                         <div className="text-xs text-muted-foreground">
                           Booked on {new Date(booking.created_at).toLocaleDateString()}
+                          {booking.status === 'pending' && (
+                            <span className="block mt-1">
+                              Expires: {new Date(booking.expires_at).toLocaleString()}
+                            </span>
+                          )}
                         </div>
                       </CardContent>
                     </div>
