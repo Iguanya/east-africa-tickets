@@ -276,6 +276,10 @@ export type Database = {
         Args: { points_to_add: number; user_id: string }
         Returns: number
       }
+      expire_old_bookings: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_event_capacity: {
         Args: { event_id: string }
         Returns: number

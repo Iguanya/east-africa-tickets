@@ -71,7 +71,7 @@ const EventGrid = () => {
                 price={event.tickets?.[0]?.price || 0}
                 currency={event.currency || 'KSH'}
                 category={event.category}
-                ticketsLeft={event.max_capacity - event.tickets_sold}
+                ticketsLeft={(event.max_capacity || 0) - (event.tickets_sold || 0)}
                 rating={4.5}
               />
             ))

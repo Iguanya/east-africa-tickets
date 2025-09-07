@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
-import { bookingService } from "@/lib/supabase";
+import { bookingService, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 interface Booking {
@@ -40,11 +40,21 @@ export default function UserBookings() {
 
   const fetchBookings = async () => {
     try {
-      // In a real app, get the actual user ID from auth
-      const userId = "user-id"; // Placeholder
-      const data = await bookingService.getUserBookings(userId);
+      // Get the current authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to view your bookings",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const data = await bookingService.getUserBookings(user.id);
       setBookings(data || []);
     } catch (error) {
+      console.error('Error fetching bookings:', error);
       toast({
         title: "Error",
         description: "Failed to fetch your bookings",
@@ -59,8 +69,19 @@ export default function UserBookings() {
     switch (status) {
       case 'confirmed': return 'default';
       case 'pending': return 'secondary';
+      case 'expired': return 'outline';
       case 'cancelled': return 'destructive';
       default: return 'outline';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'confirmed': return 'Confirmed';
+      case 'pending': return 'Payment Pending';
+      case 'expired': return 'Expired';
+      case 'cancelled': return 'Cancelled';
+      default: return status;
     }
   };
 
@@ -123,7 +144,7 @@ export default function UserBookings() {
                           <div>
                             <CardTitle className="text-xl mb-2">{booking.events.title}</CardTitle>
                             <Badge variant={getStatusColor(booking.status)} className="mb-2">
-                              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                              {getStatusText(booking.status)}
                             </Badge>
                           </div>
                           {booking.status === 'confirmed' && (
