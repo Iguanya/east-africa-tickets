@@ -91,9 +91,10 @@ export type Database = {
           id: string
           image_url: string | null
           location: string
-          max_capacity: number
+          organizer_id: string | null
           status: string | null
           tickets_sold: number | null
+          time: string | null
           title: string
           updated_at: string | null
         }
@@ -107,9 +108,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           location: string
-          max_capacity: number
+          organizer_id?: string | null
           status?: string | null
           tickets_sold?: number | null
+          time?: string | null
           title: string
           updated_at?: string | null
         }
@@ -123,9 +125,10 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string
-          max_capacity?: number
+          organizer_id?: string | null
           status?: string | null
           tickets_sold?: number | null
+          time?: string | null
           title?: string
           updated_at?: string | null
         }
@@ -138,7 +141,8 @@ export type Database = {
           created_at: string | null
           currency: string
           id: string
-          payment_method: string
+          method: string | null
+          payment_method: string | null
           payment_reference: string | null
           status: string | null
           transaction_id: string | null
@@ -150,7 +154,8 @@ export type Database = {
           created_at?: string | null
           currency: string
           id?: string
-          payment_method: string
+          method?: string | null
+          payment_method?: string | null
           payment_reference?: string | null
           status?: string | null
           transaction_id?: string | null
@@ -162,7 +167,8 @@ export type Database = {
           created_at?: string | null
           currency?: string
           id?: string
-          payment_method?: string
+          method?: string | null
+          payment_method?: string | null
           payment_reference?: string | null
           status?: string | null
           transaction_id?: string | null
@@ -181,6 +187,7 @@ export type Database = {
       tickets: {
         Row: {
           created_at: string | null
+          currency: string | null
           description: string | null
           event_id: string
           id: string
@@ -188,11 +195,12 @@ export type Database = {
           price: number
           quantity_available: number
           quantity_sold: number | null
-          type: string
+          type: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           event_id: string
           id?: string
@@ -200,11 +208,12 @@ export type Database = {
           price: number
           quantity_available: number
           quantity_sold?: number | null
-          type: string
+          type?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           event_id?: string
           id?: string
@@ -212,7 +221,7 @@ export type Database = {
           price?: number
           quantity_available?: number
           quantity_sold?: number | null
-          type?: string
+          type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -266,6 +275,18 @@ export type Database = {
       add_user_points: {
         Args: { points_to_add: number; user_id: string }
         Returns: number
+      }
+      get_event_capacity: {
+        Args: { event_id: string }
+        Returns: number
+      }
+      get_event_tickets_sold: {
+        Args: { event_id: string }
+        Returns: number
+      }
+      update_ticket_quantities: {
+        Args: { qty: number; ticket_id: string }
+        Returns: undefined
       }
     }
     Enums: {
