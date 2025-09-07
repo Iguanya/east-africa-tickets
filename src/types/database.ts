@@ -7,8 +7,8 @@ export interface Event {
   date: string;
   location: string;
   category: string;
-  max_capacity: number;
-  tickets_sold: number;
+  max_capacity?: number; // Calculated from tickets
+  tickets_sold?: number; // Calculated from tickets
   status: string;
   currency: string;
   created_at: string;

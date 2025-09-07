@@ -4,7 +4,7 @@ export { supabase };
 
 // Helper functions for common operations
 export const eventService = {
-  // Get all events with tickets
+  // Get all events with tickets and calculated capacity
   async getEvents() {
     const { data, error } = await supabase
       .from('events')
@@ -16,10 +16,18 @@ export const eventService = {
       .order('date', { ascending: true });
     
     if (error) throw error;
-    return data;
+    
+    // Add calculated fields for each event
+    return data?.map(event => ({
+      ...event,
+      max_capacity: event.tickets?.reduce((sum: number, ticket: any) => 
+        sum + (ticket.quantity_available || 0) + (ticket.quantity_sold || 0), 0) || 0,
+      tickets_sold: event.tickets?.reduce((sum: number, ticket: any) => 
+        sum + (ticket.quantity_sold || 0), 0) || 0
+    })) || [];
   },
 
-  // Get single event with tickets
+  // Get single event with tickets and calculated capacity
   async getEvent(id: string) {
     const { data, error } = await supabase
       .from('events')
@@ -31,6 +39,15 @@ export const eventService = {
       .single();
     
     if (error) throw error;
+    
+    // Add calculated fields
+    if (data) {
+      (data as any).max_capacity = data.tickets?.reduce((sum: number, ticket: any) => 
+        sum + (ticket.quantity_available || 0) + (ticket.quantity_sold || 0), 0) || 0;
+      (data as any).tickets_sold = data.tickets?.reduce((sum: number, ticket: any) => 
+        sum + (ticket.quantity_sold || 0), 0) || 0;
+    }
+    
     return data;
   },
 
@@ -259,11 +276,13 @@ export const paymentService = {
 
     if (bookingError) throw bookingError
 
-    // 3️⃣ Update ticket quantities (simplified for now)
-    // TODO: Implement proper ticket quantity update
-    const ticketError = null;
+    // 3️⃣ Update ticket quantities using database function
+    const { error: ticketError } = await supabase.rpc('update_ticket_quantities', {
+      ticket_id: booking.ticket_id,
+      qty: booking.quantity
+    });
 
-    if (ticketError) throw ticketError
+    if (ticketError) throw ticketError;
 
     return payment
   }
