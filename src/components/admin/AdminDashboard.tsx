@@ -13,11 +13,15 @@ import {
   Trash2,
   Eye
 } from "lucide-react";
-import { eventService } from "@/lib/supabase";
+import { eventService, supabase } from "@/lib/supabase";
 import { Event } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import EventForm from "./EventForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import AdminBookingsTab from "./AdminBookingsTab";
+import AdminAnalyticsTab from "./AdminAnalyticsTab";
+import UserManagementTab from "./UserManagementTab";
+import TicketManagementDialog from "./TicketManagementDialog";
 
 const AdminDashboard = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -25,21 +29,50 @@ const AdminDashboard = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedEventForTickets, setSelectedEventForTickets] = useState<Event | null>(null);
+  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    activeEvents: 0,
+    totalTicketsSold: 0,
+    totalRevenue: 0,
+    totalBookings: 0,
+    confirmedBookings: 0,
+    pendingBookings: 0
+  });
   const { toast } = useToast();
 
   useEffect(() => {
-    loadEvents();
+    loadDashboardData();
   }, []);
 
-  const loadEvents = async () => {
+  const loadDashboardData = async () => {
     try {
-      const data = await eventService.getEvents();
-      setEvents(data || []);
+      const [eventsData, bookingsData, paymentsData] = await Promise.all([
+        eventService.getEvents(),
+        supabase.from('bookings').select('*'),
+        supabase.from('payments').select('*').eq('status', 'success')
+      ]);
+
+      const events = eventsData || [];
+      const bookings = bookingsData.data || [];
+      const payments = paymentsData.data || [];
+
+      setEvents(events);
+      setStats({
+        totalEvents: events.length,
+        activeEvents: events.filter(e => e.status === 'active').length,
+        totalTicketsSold: events.reduce((sum, e) => sum + (e.tickets_sold || 0), 0),
+        totalRevenue: payments.reduce((sum, p) => sum + Number(p.amount), 0),
+        totalBookings: bookings.length,
+        confirmedBookings: bookings.filter(b => b.status === 'confirmed').length,
+        pendingBookings: bookings.filter(b => b.status === 'pending').length,
+      });
     } catch (error) {
-      console.error('Error loading events:', error);
+      console.error('Error loading dashboard data:', error);
       toast({
         title: "Error",
-        description: "Failed to load events",
+        description: "Failed to load dashboard data",
         variant: "destructive"
       });
     } finally {
@@ -86,12 +119,6 @@ const AdminDashboard = () => {
     });
   };
 
-  const stats = {
-    totalEvents: events.length,
-    activeEvents: events.filter(e => e.status === 'active').length,
-    totalTicketsSold: events.reduce((sum, e) => sum + (e.tickets_sold || 0), 0),
-    totalRevenue: 0 // Will calculate from bookings/payments in the future
-  };
 
   if (loading) {
     return (
@@ -191,6 +218,7 @@ const AdminDashboard = () => {
         <TabsList>
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="bookings">Bookings</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -223,7 +251,15 @@ const AdminDashboard = () => {
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedEventForTickets(event);
+                          setIsTicketDialogOpen(true);
+                        }}
+                        title="Manage Tickets"
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button 
@@ -233,6 +269,7 @@ const AdminDashboard = () => {
                           setSelectedEvent(event);
                           setIsEditDialogOpen(true);
                         }}
+                        title="Edit Event"
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -240,6 +277,7 @@ const AdminDashboard = () => {
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleDeleteEvent(event.id)}
+                        title="Delete Event"
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -265,25 +303,15 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="bookings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Booking management coming soon...</p>
-            </CardContent>
-          </Card>
+          <AdminBookingsTab />
+        </TabsContent>
+
+        <TabsContent value="users">
+          <UserManagementTab />
         </TabsContent>
 
         <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics & Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Analytics dashboard coming soon...</p>
-            </CardContent>
-          </Card>
+          <AdminAnalyticsTab />
         </TabsContent>
       </Tabs>
 
@@ -301,6 +329,19 @@ const AdminDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Ticket Management Dialog */}
+      {selectedEventForTickets && (
+        <TicketManagementDialog
+          isOpen={isTicketDialogOpen}
+          onClose={() => {
+            setIsTicketDialogOpen(false);
+            setSelectedEventForTickets(null);
+          }}
+          eventId={selectedEventForTickets.id}
+          eventTitle={selectedEventForTickets.title}
+        />
+      )}
     </div>
   );
 };

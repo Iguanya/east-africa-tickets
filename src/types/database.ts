@@ -24,6 +24,7 @@ export interface Ticket {
   name: string;
   description: string | null;
   price: number;
+  currency: string | null;
   quantity_available: number;
   quantity_sold: number;
   created_at: string;
