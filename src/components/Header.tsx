@@ -1,13 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Ticket, Calendar } from "lucide-react";
-
-// Example user object (replace with your actual auth context/hook)
-const user = {
-  isAuthenticated: true, // false if not logged in
-  isAdmin: true,         // true only if user is an admin
-};
+import { Ticket } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const Header = () => {
+  const { user, loading } = useAuth();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -34,25 +31,17 @@ const Header = () => {
 
         {/* Actions */}
         <div className="flex items-center space-x-2">
-          {!user.isAuthenticated && (
+          {!loading && !user && (
             <Button variant="ghost" size="sm" asChild>
               <a href="/auth">Login / Sign Up</a>
             </Button>
           )}
 
-          {user.isAuthenticated && (
+          {!loading && user && (
             <>
               <Button variant="outline" size="sm" asChild>
-                <a href="/dashboard">Dashboard</a>
+                <a href={user.is_admin ? "/admin" : "/dashboard"}>Dashboard</a>
               </Button>
-              {user.isAdmin && (
-                <Button variant="hero" size="sm" asChild>
-                  <a href="/admin">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Admin
-                  </a>
-                </Button>
-              )}
             </>
           )}
         </div>

@@ -1,26 +1,32 @@
-// Deprecated: admin routing now handled via nested routes in src/pages/admin/.
-const Admin = () => null;
-export default Admin;
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
-import AdminDashboard from "@/components/admin/AdminDashboard";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
-const Admin = () => {
+const PAGE_TITLES: Record<string, string> = {
+  "/admin": "Dashboard",
+  "/admin/events": "Events",
+  "/admin/bookings": "Bookings",
+  "/admin/analytics": "Analytics",
+  "/admin/settings": "Settings",
+};
+
+const AdminLayout = () => {
   const { user, loading, signOut } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const pageTitle = useMemo(() => PAGE_TITLES[location.pathname] || "Admin Panel", [location.pathname]);
 
   useEffect(() => {
     if (!loading && user && !user.is_admin) {
-          toast({
-            title: "Access Denied",
+      toast({
+        title: "Access Denied",
         description: "You need admin privileges to view this page.",
         variant: "destructive",
-          });
-        }
+      });
+    }
   }, [loading, user, toast]);
 
   if (loading) {
@@ -41,24 +47,25 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen flex w-full">
-      <AppSidebar 
-        isAdmin 
+      <AppSidebar
+        isAdmin
         onSignOut={signOut}
         collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggle={() => setSidebarCollapsed((prev) => !prev)}
       />
-      
+
       <main className="flex-1">
         <header className="h-12 flex items-center border-b bg-background px-4">
-          <h1 className="font-semibold">Admin Panel</h1>
+          <h1 className="font-semibold">{pageTitle}</h1>
         </header>
-        
+
         <div className="p-6">
-          <AdminDashboard />
+          <Outlet />
         </div>
       </main>
     </div>
   );
 };
 
-export default Admin;
+export default AdminLayout;
+

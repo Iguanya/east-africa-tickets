@@ -60,6 +60,47 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Run the project locally with MySQL
+
+1. **Provision MySQL**
+   - Create a database named `east_africa_tickets`
+   - Run the schema at `server/schema.sql` (`mysql -u root -p < server/schema.sql`)
+
+2. **Configure environment variables**
+   - Copy the variables below into a `.env` file in the project root and update as needed:
+
+     ```
+     MYSQL_HOST=localhost
+     MYSQL_PORT=3306
+     MYSQL_USER=root
+     MYSQL_PASSWORD=
+     MYSQL_DATABASE=east_africa_tickets
+     MYSQL_CONNECTION_LIMIT=10
+     JWT_SECRET=super-secret-key
+     CLIENT_ORIGIN=http://localhost:5173
+     API_PORT=4000
+     ```
+
+3. **Install dependencies**
+
+   ```sh
+   npm install
+   ```
+
+4. **Start the local API server (Express + MySQL)**
+
+   ```sh
+   npm run server
+   ```
+
+5. **In another terminal, run the Vite frontend**
+
+   ```sh
+   npm run dev
+   ```
+
+The frontend talks to the API at `http://localhost:4000/api` by default. Update `VITE_API_URL` if you need a different origin.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/96e62f66-da3d-44ba-be5f-b0a7b89c97b8) and click on Share -> Publish.

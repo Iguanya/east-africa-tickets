@@ -1,272 +1,154 @@
-import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from "./api-client";
+import { AdminAnalyticsSummary, Booking, Event, Ticket, UserProfile } from "@/types/database";
 
-export { supabase };
+export interface AuthResponse {
+  user: UserProfile;
+  token: string;
+}
 
-// Helper functions for common operations
+export type BookingWithRelations = Booking & {
+  events?: Partial<Event>;
+  tickets?: Partial<Ticket>;
+};
+
+export const authService = {
+  signUp(payload: { email: string; password: string; fullName: string; phone?: string }) {
+    return apiFetch<AuthResponse>("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      skipAuth: true,
+    });
+  },
+  signIn(payload: { email: string; password: string }) {
+    return apiFetch<AuthResponse>("/auth/signin", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      skipAuth: true,
+    });
+  },
+  async getMe() {
+    return apiFetch<{ user: UserProfile }>("/auth/me");
+  },
+};
+
 export const eventService = {
-  // Get all events with tickets
-  async getEvents() {
-    const { data, error } = await supabase
-      .from('events')
-      .select(`
-        *,
-        tickets (*)
-      `)
-      .eq('status', 'active')
-      .order('date', { ascending: true });
-    
-    if (error) throw error;
-    return data;
+  getEvents() {
+    return apiFetch<Event[]>("/events");
   },
-
-  // Get single event with tickets
-  async getEvent(id: string) {
-    const { data, error } = await supabase
-      .from('events')
-      .select(`
-        *,
-        tickets (*)
-      `)
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
+  getEvent(id: string) {
+    return apiFetch<Event>(`/events/${id}`);
   },
-
-  // Create new event (admin only)
-  async createEvent(event: any) {
-    const { data, error } = await supabase
-      .from('events')
-      .insert(event)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+  createEvent(event: Partial<Event>) {
+    return apiFetch<Event>("/events", {
+      method: "POST",
+      body: JSON.stringify(event),
+    });
   },
-
-  // Update event (admin only)
-  async updateEvent(id: string, updates: any) {
-    const { data, error } = await supabase
-      .from('events')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+  updateEvent(id: string, updates: Partial<Event>) {
+    return apiFetch<Event>(`/events/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
   },
-
-  // Delete event (admin only)
-  async deleteEvent(id: string) {
-    const { error } = await supabase
-      .from('events')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-  }
+  deleteEvent(id: string) {
+    return apiFetch<void>(`/events/${id}`, {
+      method: "DELETE",
+    });
+  },
 };
 
 export const ticketService = {
-  // Create ticket for event
-  async createTicket(ticket: any) {
-    const { data, error } = await supabase
-      .from('tickets')
-      .insert(ticket)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+  createTicket(ticket: Partial<Ticket>) {
+    return apiFetch<Ticket>("/tickets", {
+      method: "POST",
+      body: JSON.stringify(ticket),
+    });
   },
-
-  // Update ticket
-  async updateTicket(id: string, updates: any) {
-    const { data, error } = await supabase
-      .from('tickets')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+  updateTicket(id: string, updates: Partial<Ticket>) {
+    return apiFetch<Ticket>(`/tickets/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
   },
-
-  // Delete ticket
-  async deleteTicket(id: string) {
-    const { error } = await supabase
-      .from('tickets')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-  }
+  deleteTicket(id: string) {
+    return apiFetch<void>(`/tickets/${id}`, {
+      method: "DELETE",
+    });
+  },
 };
 
-// bookingService.ts
 export const bookingService = {
-  // Create booking with 15-minute hold
-  async createBooking(booking: any) {
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert(booking)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+  createBooking(payload: Partial<Booking>) {
+    return apiFetch<BookingWithRelations>("/bookings", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
-
-  // Get user bookings
-  async getUserBookings(userId: string) {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        events (*),
-        tickets (*)
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data;
+  getUserBookings() {
+    return apiFetch<BookingWithRelations[]>("/bookings");
   },
-
-  // Confirm booking (after payment)
-  async confirmBooking(bookingId: string) {
-    // 1. Check if a successful payment exists
-    const { data: payments, error: payError } = await supabase
-      .from('payments')
-      .select('id')
-      .eq('booking_id', bookingId)
-      .eq('status', 'success')
-
-    if (payError) throw payError
-    if (!payments || payments.length === 0) {
-      throw new Error("No successful payment found for this booking")
-    }
-
-    // 2. Update the booking
-    const { data, error } = await supabase
-      .from('bookings')
-      .update({ status: 'confirmed' })
-      .eq('id', bookingId)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
+  getBookingById(id: string) {
+    return apiFetch<BookingWithRelations>(`/bookings/${id}`, { skipAuth: true });
   },
-
-  // Cancel booking
-  async cancelBooking(bookingId: string) {
-    const { data, error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' })
-      .eq('id', bookingId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
+  confirmBooking(id: string) {
+    return apiFetch<BookingWithRelations>(`/bookings/${id}/confirm`, {
+      method: "POST",
+    });
+  },
+  cancelBooking(id: string) {
+    return apiFetch<BookingWithRelations>(`/bookings/${id}/cancel`, {
+      method: "POST",
+    });
+  },
 };
 
 export const userService = {
-  // Get user profile
-  async getProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (error) throw error;
-    return data;
+  getProfile(userId: string) {
+    return apiFetch<UserProfile>(`/users/${userId}`);
   },
-
-  // Update user profile
-  async updateProfile(userId: string, updates: any) {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .update(updates)
-      .eq('id', userId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // Add points to user
-  async addPoints(userId: string, points: number) {
-    const { data, error } = await supabase.rpc('add_user_points', {
-      user_id: userId,
-      points_to_add: points
+  updateProfile(userId: string, updates: Partial<UserProfile>) {
+    return apiFetch<UserProfile>(`/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
     });
-    
-    if (error) throw error;
-    return data;
-  }
+  },
+  addPoints(userId: string, points: number) {
+    return apiFetch<UserProfile>(`/users/${userId}/points`, {
+      method: "POST",
+      body: JSON.stringify({ points }),
+    });
+  },
+};
+
+export const adminService = {
+  getAllBookings() {
+    return apiFetch<BookingWithRelations[]>("/admin/bookings");
+  },
+  getAnalytics() {
+    return apiFetch<AdminAnalyticsSummary>("/admin/analytics");
+  },
 };
 
 const METHOD_MAP: Record<string, string> = {
   "M-Pesa": "mpesa",
-  "Stripe": "stripe",
-  "PayPal": "paypal",
-  "Card": "card",
-  "simulated": "simulated"
-}
+  Stripe: "stripe",
+  PayPal: "paypal",
+  Card: "card",
+  simulated: "simulated",
+};
 
 export const paymentService = {
-  async processPayment(
-    bookingId: string,
-    amount: number,
-    method: string,
-    currency: string
-  ) {
-    // ✅ Ensure method maps correctly to DB-accepted value
-    const mappedMethod = METHOD_MAP[method] || "simulated"
-
-    // 1️⃣ Record the payment
-    const { data: payment, error } = await supabase
-      .from("payments")
-      .insert([
-        {
+  processPayment(bookingId: string, amount: number, method: string, currency: string) {
+    const payment_method = METHOD_MAP[method] || METHOD_MAP.simulated;
+    return apiFetch("/payments", {
+      method: "POST",
+      body: JSON.stringify({
           booking_id: bookingId,
           amount,
-          payment_method: mappedMethod,
+        payment_method,
           currency,
-          status: "success",
-        },
-      ])
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // 2️⃣ Fetch booking details (to know which ticket & how many)
-    const { data: booking, error: bookingError } = await supabase
-      .from("bookings")
-      .select("ticket_id, quantity")
-      .eq("id", bookingId)
-      .single()
-
-    if (bookingError) throw bookingError
-
-    // 3️⃣ Update ticket quantities
-    const { error: ticketError } = await supabase.rpc("update_ticket_quantities", {
-      ticket_id: booking.ticket_id,
-      qty: booking.quantity,
-    })
-
-    if (ticketError) throw ticketError
-
-    return payment
-  }
-}
+      }),
+      skipAuth: true,
+    });
+  },
+};

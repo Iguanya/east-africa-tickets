@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase, bookingService, paymentService } from "@/lib/supabase";
+import { bookingService, paymentService } from "@/lib/supabase";
+import type { BookingWithRelations } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -9,28 +10,26 @@ import { toast } from "@/components/ui/use-toast";
 const PaymentPage = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
-  const [booking, setBooking] = useState<any>(null);
+  const [booking, setBooking] = useState<BookingWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBooking = async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("*")
-        .eq("id", bookingId)
-        .single();
-
-      if (error) {
+      if (!bookingId) return;
+      try {
+        const data = await bookingService.getBookingById(bookingId);
+        setBooking(data);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Booking not found";
         toast({
           title: "Error",
-          description: "Booking not found",
+          description: message,
           variant: "destructive",
         });
         navigate("/404");
-      } else {
-        setBooking(data);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchBooking();
@@ -38,22 +37,27 @@ const PaymentPage = () => {
 
   // Payment handler
   async function handlePayment(method: string) {
+    if (!booking) return;
     try {
-      const res = await paymentService.processPayment(
+      await paymentService.processPayment(
         booking.id,
         booking.total_amount,
         method,
         booking.currency
-      )
-
-      console.log("Payment processed:", res)
-      alert("✅ Payment successful, booking confirmed!")
-
-      // ✅ Normal browser redirect
-      window.location.href = `/dashboard`
-    } catch (err: any) {
-      console.error("Payment failed", err.message)
-      alert("❌ Payment failed")
+      );
+      toast({
+        title: "Payment Successful",
+        description: "Your booking has been confirmed.",
+      });
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Payment failed", error);
+      const message = error instanceof Error ? error.message : "Unable to complete payment.";
+      toast({
+        title: "Payment Failed",
+        description: message,
+        variant: "destructive",
+      });
     }
   }
 
@@ -79,7 +83,7 @@ const PaymentPage = () => {
             <strong>Booking ID:</strong> {booking.id}
           </p>
           <p className="mb-2">
-            <strong>Event:</strong> {booking.event_id}
+            <strong>Event:</strong> {booking.events?.title || booking.event_id}
           </p>
           <p className="mb-2">
             <strong>Amount:</strong> {booking.currency} {booking.total_amount}

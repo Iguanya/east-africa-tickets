@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import EventCard from "./EventCard";
 import { Button } from "@/components/ui/button";
 import { eventService } from "@/lib/supabase";
@@ -10,16 +10,14 @@ const EventGrid = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
+      console.log("[EventGrid] Fetching events...");
       const data = await eventService.getEvents();
+      console.log("[EventGrid] Events response:", data);
       setEvents(data || []);
     } catch (error) {
-      console.error('Error loading events:', error);
+      console.error("[EventGrid] Error loading events:", error);
       toast({
         title: "Error",
         description: "Failed to load events",
@@ -28,7 +26,11 @@ const EventGrid = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
 
   if (loading) {
     return (

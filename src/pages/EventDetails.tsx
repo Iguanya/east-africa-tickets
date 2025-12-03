@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,21 +7,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, MapPin, Clock, Users, Star, ArrowLeft } from "lucide-react";
+import { Calendar, MapPin, Clock, Users, ArrowLeft } from "lucide-react";
 import { eventService, bookingService } from "@/lib/supabase";
 import { Event, Ticket } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import AuthForm from "@/components/auth/AuthForm";
-import { supabase } from "@/lib/supabase";
-import { User } from "@supabase/supabase-js";
 import Header from "@/components/Header";
+import { useAuth } from "@/context/AuthContext";
 
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
@@ -33,65 +31,66 @@ const EventDetails = () => {
   });
   const [bookingAsGuest, setBookingAsGuest] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    if (id) {
-      loadEvent();
-    }
-    
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [id]);
-
-  const loadEvent = async () => {
+  const loadEvent = useCallback(async () => {
     if (!id) return;
     
     try {
       const data = await eventService.getEvent(id);
       setEvent(data);
     } catch (error) {
-      console.error('Error loading event:', error);
+      console.error("Error loading event:", error);
       toast({
         title: "Error",
         description: "Failed to load event details",
-        variant: "destructive"
+        variant: "destructive",
       });
-      navigate('/');
+      navigate("/");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, toast, navigate]);
+
+  useEffect(() => {
+    loadEvent();
+  }, [loadEvent]);
+
+  useEffect(() => {
+    if (user) {
+      setBookingAsGuest(false);
+    }
+  }, [user]);
 
   const handleBooking = async () => {
     if (!event || !selectedTicket) return;
 
+    if (!user && bookingAsGuest && (!guestInfo.name || !guestInfo.email)) {
+      toast({
+        title: "Missing information",
+        description: "Please provide your name and email to continue as a guest.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const booking = {
+      const bookingPayload: Record<string, unknown> = {
         event_id: event.id,
         ticket_id: selectedTicket.id,
         quantity,
         total_amount: Number(selectedTicket.price) * quantity,
         currency: event.currency || "KSH",
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min hold
-        ...(user
-          ? { user_id: user.id }
-          : {
-              guest_name: guestInfo.name,
-              guest_email: guestInfo.email,
-              guest_phone: guestInfo.phone,
-            }),
       };
 
-      const newBooking = await bookingService.createBooking(booking);
+      if (!user) {
+        bookingPayload.guest_name = guestInfo.name;
+        bookingPayload.guest_email = guestInfo.email;
+        bookingPayload.guest_phone = guestInfo.phone;
+      }
+
+      const newBooking = await bookingService.createBooking(bookingPayload);
 
       toast({
         title: "Booking Created",
@@ -99,10 +98,11 @@ const EventDetails = () => {
       });
 
       navigate(`/payment/${newBooking.id}`);
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create booking";
       toast({
         title: "Error",
-        description: error.message || "Failed to create booking",
+        description: message,
         variant: "destructive",
       });
     }

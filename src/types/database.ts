@@ -15,6 +15,7 @@ export interface Event {
   updated_at: string;
   created_by?: string | null;
   tickets?: Ticket[];
+  revenue?: number;
 }
 
 export interface Ticket {
@@ -24,6 +25,7 @@ export interface Ticket {
   name: string;
   description: string | null;
   price: number;
+  currency?: string;
   quantity_available: number;
   quantity_sold: number;
   created_at: string;
@@ -36,7 +38,7 @@ export interface UserProfile {
   full_name: string | null;
   phone: string | null;
   points: number;
-  is_admin?: boolean;
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +58,9 @@ export interface Booking {
   expires_at: string;
   created_at: string;
   updated_at: string;
+  events?: Partial<Event>;
+  tickets?: Partial<Ticket>;
+  user?: AdminUserSummary;
 }
 
 export interface Payment {
@@ -69,4 +74,26 @@ export interface Payment {
   status: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface AdminUserSummary {
+  id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  is_admin: boolean;
+}
+
+export interface AdminAnalyticsSummary {
+  totalEvents: number;
+  upcomingEvents: number;
+  ticketsSold: number;
+  totalRevenue: number;
+  bookingsToday: number;
+  topEvents: Array<{
+    id: string;
+    title: string;
+    revenue: number;
+    tickets: number;
+  }>;
 }

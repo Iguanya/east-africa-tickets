@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,87 +7,55 @@ import { Badge } from "@/components/ui/badge";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, MapPin, CreditCard, User as UserIcon } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { bookingService, userService } from "@/lib/supabase";
+import type { BookingWithRelations } from "@/lib/supabase";
+import { UserProfile } from "@/types/database";
 
 const Dashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [userBookings, setUserBookings] = useState<any[]>([]);
+  const { user, loading, signOut } = useAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userBookings, setUserBookings] = useState<BookingWithRelations[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        // Fetch user data when authenticated
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
-        }
-      }
-    );
+    if (!user) {
+      setDataLoading(false);
+      return;
+    }
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      }
-    });
+    setUserProfile(user);
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserData = async (userId: string) => {
-    try {
-      // Fetch user profile
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
+    const load = async () => {
+      setDataLoading(true);
+      try {
+        const profile = await userService.getProfile(user.id);
       setUserProfile(profile);
-
-      // Fetch user bookings with event and ticket details
-      const { data: bookings } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          events (title, date, location, image_url),
-          tickets (name, type, price)
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      
+        const bookings = await bookingService.getUserBookings();
       setUserBookings(bookings || []);
     } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
-
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+        console.error("Error fetching dashboard data:", error);
+        const message = error instanceof Error ? error.message : "Failed to load your dashboard";
       toast({
         title: "Error",
-        description: "Failed to sign out",
+          description: message,
         variant: "destructive",
       });
-    }
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    load();
+  }, [user, toast]);
+
+  const handleSignOut = () => {
+    signOut();
   };
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>

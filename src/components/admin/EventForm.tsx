@@ -7,9 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { eventService, ticketService } from "@/lib/supabase";
-import { Event, Ticket } from "@/types/database";
+import { Event } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 
 interface EventFormProps {
   event?: Event;
@@ -48,6 +48,7 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
   ]);
 
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -86,14 +87,13 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
     setLoading(true);
 
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        throw new Error("You must be signed in to manage events.");
+      }
 
       const eventData = {
         ...formData,
-        date: new Date(formData.date + 'T00:00:00').toISOString(),
-        organizer_id: user.id,
+        date: new Date(`${formData.date}T${formData.time || "00:00"}`).toISOString(),
       };
 
       let savedEvent: Event;
@@ -113,7 +113,7 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
           await ticketService.createTicket({
             event_id: savedEvent.id,
             name: ticket.name,
-            type: ticket.name, // 👈 added
+              type: ticket.name,
             description: ticket.description,
             price: ticket.price,
             currency: ticket.currency,
