@@ -34,7 +34,6 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
     time: event?.date ? new Date(event.date).toISOString().split('T')[1].slice(0, 5) : '',
     location: event?.location || '',
     category: event?.category || '',
-    max_capacity: event?.max_capacity || 100,
   });
 
   const [tickets, setTickets] = useState<TicketFormData[]>([
@@ -238,15 +237,18 @@ const EventForm = ({ event, onEventCreated }: EventFormProps) => {
             </div>
 
             <div>
-              <Label htmlFor="max_capacity">Max Capacity</Label>
+              <Label htmlFor="total_capacity">Total Capacity</Label>
               <Input
-                id="max_capacity"
+                id="total_capacity"
                 type="number"
-                value={formData.max_capacity}
-                onChange={(e) => handleInputChange('max_capacity', parseInt(e.target.value))}
-                min="1"
-                required
+                value={tickets.reduce((sum, ticket) => sum + (ticket.quantity_available || 0), 0)}
+                placeholder="Calculated from tickets"
+                disabled
+                className="bg-muted"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Capacity is automatically calculated from ticket quantities
+              </p>
             </div>
           </div>
         </CardContent>
